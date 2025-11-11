@@ -1,6 +1,19 @@
-import mongoose from "mongoose";
+import mongoose, {Document} from "mongoose";
 
-const ProgressSchema = new mongoose.Schema({
+export interface TopicsProgressTypes {
+    topicId:mongoose.Types.ObjectId,
+    doneQuestions:mongoose.Types.ObjectId[],
+    bookmarkedQuestions:mongoose.Types.ObjectId[],
+    notes:{questionId:mongoose.Types.ObjectId, text:string}[]
+
+
+}
+export interface ProgressSchemaTypes extends Document{
+    userId:mongoose.Types.ObjectId
+    topics:TopicsProgressTypes[]
+}
+
+const ProgressSchema = new mongoose.Schema<ProgressSchemaTypes>({
     userId:{
         type: mongoose.Schema.Types.ObjectId,
         ref:"User",
@@ -36,4 +49,4 @@ const ProgressSchema = new mongoose.Schema({
     ]
 })
 
-export const Progress = mongoose.model("Progress", ProgressSchema)
+export const Progress = mongoose.model<ProgressSchemaTypes>("Progress", ProgressSchema)

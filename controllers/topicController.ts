@@ -1,11 +1,17 @@
 // controllers/topicController.js
 import { Topic } from "../models/topicModel.js";
-import { Progress } from "../models/progressModel.js";
+import { Progress, ProgressSchemaTypes, TopicsProgressTypes } from "../models/progressModel.js";
+import { Response, Request } from "express";
+import mongoose from "mongoose";
 
-/**
- * Add a topic
- */
-export const addTopic = async (req, res) => {
+export type AuthRequest = Omit<Request, "user"> & {
+  user?: {
+    _id?: string | mongoose.Types.ObjectId;
+    // optional: email?: string; role?: string; etc.
+  };
+};
+
+export const addTopic = async (req:Request, res:Response) => {
   try {
     const topicData = req.body;
     const newTopic = new Topic(topicData);
@@ -20,9 +26,9 @@ export const addTopic = async (req, res) => {
 /**
  * Get all topics with user progress merged
  */
-export const getAllTopics = async (req, res) => {
+export const getAllTopics = async (req:AuthRequest, res:Response) => {
   try {
-    const userId = req.user?._id;
+    const userId = req.user?._id ;
     const topics = await Topic.find({}).lean();
 
     if (!userId) return res.status(200).json({ topics });
@@ -67,7 +73,7 @@ export const getAllTopics = async (req, res) => {
 
       const questions = topic.questions.map(q => {
         const qId = q._id.toString();
-        const noteObj = notesArr.find(n => n.questionId?.toString() === qId);
+        const noteObj = notesArr.find((n:any) => n.questionId?.toString() === qId);
         return {
           ...q,
           Done: doneSet.has(qId),
@@ -89,9 +95,9 @@ export const getAllTopics = async (req, res) => {
 /**
  * Get topic by name with progress merged
  */
-export const getTopicById = async (req, res) => {
+export const getTopicById = async (req:AuthRequest, res:Response) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user?._id;
     const { topicName } = req.params;
 
     if (!topicName) {
@@ -109,7 +115,7 @@ export const getTopicById = async (req, res) => {
     }
 
     // Ensure progress exists
-    let userProgress = progress;
+    let userProgress:ProgressSchemaTypes | null = progress;
     if (!userProgress) {
       userProgress = await new Progress({ userId, topics: [] }).save();
     }
@@ -149,7 +155,7 @@ export const getTopicById = async (req, res) => {
 /**
  * Update Done / Bookmark / Notes for a question
  */
-export const updateFields = async (req, res) => {
+export const updateFields = async (req:AuthRequest, res:Response) => {
   try {
     const userId = req.user?._id;
     const { topicId, questionId } = req.params;
@@ -158,7 +164,7 @@ export const updateFields = async (req, res) => {
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
     if (!topicId || !questionId) return res.status(400).json({ message: "Missing IDs" });
 
-    let progress = await Progress.findOne({ userId });
+    let progress: ProgressSchemaTypes | null = await Progress.findOne({ userId }).lean<ProgressSchemaTypes | null>().exec()
     if (!progress) {
       progress = new Progress({ userId, topics: [] });
       await progress.save();
@@ -200,10 +206,18 @@ export const updateFields = async (req, res) => {
     }
 
     // Return updated topic
-    progress = await Progress.findOne({ userId }).lean();
-    const updatedTopicProgress = progress.topics.find(t => t.topicId.toString() === topicId);
+    progress  = await Progress.findOne({ userId }).lean<ProgressSchemaTypes | null>().exec() ;
+    const updatedTopicProgress:TopicsProgressTypes = progress?.topics?.find(t => t.topicId?.toString() === topicId)  ?? {
+    topicId: new mongoose.Types.ObjectId(topicId), // placeholder
+    doneQuestions: [],
+    bookmarkedQuestions: [],
+    notes: [],
+  };
 
     const topicData = await Topic.findById(topicId).lean();
+    if (!topicData) {
+        return res.status(404).json({ message: "Topic not found" });
+    }
     const doneSet = new Set(updatedTopicProgress.doneQuestions?.map(String) || []);
     const bookmarkSet = new Set(updatedTopicProgress.bookmarkedQuestions?.map(String) || []);
     const notesArr = updatedTopicProgress.notes || [];
@@ -224,7 +238,7 @@ export const updateFields = async (req, res) => {
 /**
  * Get per-topic progress for user
  */
-export const progressOfEachTopic = async (req, res) => {
+export const progressOfEachTopic = async (req:AuthRequest, res:Response) => {
   try {
     const userId = req.user?._id;
     const topics = await Topic.find({}).lean();
@@ -248,11 +262,11 @@ export const progressOfEachTopic = async (req, res) => {
 /**
  * Get overall total progress
  */
-export const totalProgress = async (req, res) => {
+export const totalProgress = async (req:AuthRequest, res:Response) => {
   try {
     const userId = req.user?._id;
-    const topics = await Topic.find({}).lean();
-    const progress = await Progress.findOne({ userId }).lean();
+    const topics = await Topic.find({}).exec();
+    const progress = await Progress.findOne({ userId }).exec();
 
     const totalQuestions = topics.reduce((acc, t) => acc + t.questions.length, 0);
     const totalDone = progress
@@ -270,7 +284,7 @@ export const totalProgress = async (req, res) => {
 /**
  * Get all bookmarked questions
  */
-export const bookmarkedQuestions = async (req, res) => {
+export const bookmarkedQuestions = async (req:AuthRequest, res:Response) => {
   try {
     const userId = req.user?._id;
     const topics = await Topic.find({}).lean();
@@ -278,7 +292,7 @@ export const bookmarkedQuestions = async (req, res) => {
 
     if (!progress?.topics?.length) return res.status(200).json([]);
 
-    const result = [];
+    const result:any[] = [];
 
     const progressMap = new Map();
     progress.topics.forEach(tp => {
@@ -296,7 +310,7 @@ export const bookmarkedQuestions = async (req, res) => {
       topic.questions.forEach(q => {
         const qId = q._id.toString();
         if (tp.bookmarked.has(qId)) {
-          const noteObj = tp.notes.find(n => n.questionId?.toString() === qId);
+          const noteObj = tp.notes.find((n:any) => n.questionId?.toString() === qId);
           result.push({
             ...q,
             topicId: topic._id,

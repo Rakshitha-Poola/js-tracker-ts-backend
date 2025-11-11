@@ -3,6 +3,7 @@ import { Progress } from "../models/progressModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { Response, Request } from "express";
 import { OAuth2Client } from "google-auth-library";
 
 dotenv.config();
@@ -10,7 +11,7 @@ dotenv.config();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // --------------------- REGISTER ---------------------
-export const register = async (req, res) => {
+export const register = async (req:Request, res:Response) => {
   try {
     const { name, email, password } = req.body;
 
@@ -40,7 +41,7 @@ export const register = async (req, res) => {
     // 🔹 JWT includes role and email
     const token = jwt.sign(
       { email: newUser.email, role: newUser.role },
-      process.env.SECRET_KEY,
+      process.env.SECRET_KEY as string,
       { expiresIn: "7d" }
     );
 
@@ -57,7 +58,7 @@ export const register = async (req, res) => {
 };
 
 // --------------------- LOGIN ---------------------
-export const login = async (req, res) => {
+export const login = async (req:Request, res:Response) => {
   try {
     const { email, password } = req.body;
 
@@ -77,7 +78,7 @@ export const login = async (req, res) => {
 
     const token = jwt.sign(
       { email: user.email, role: user.role },
-      process.env.SECRET_KEY,
+      process.env.SECRET_KEY as string,
       { expiresIn: "7d" }
     );
 
@@ -95,7 +96,7 @@ export const login = async (req, res) => {
 
 // --------------------- GOOGLE LOGIN ---------------------
 // --------------------- GOOGLE LOGIN (ID Token Verification) ---------------------
-export const google = async (req, res) => {
+export const google = async (req:Request, res:Response) => {
   try {
     const { token } = req.body; // ✅ using token from Credential response
 
@@ -110,6 +111,9 @@ export const google = async (req, res) => {
     });
 
     const payload = ticket.getPayload();
+    if(!payload){
+      return res.status(400).json({ message: "Invalid Google token payload" });
+    }
     const { email, name, sub } = payload;
 
     // ✅ Check user exists or create new
@@ -123,7 +127,7 @@ export const google = async (req, res) => {
     // ✅ Generate your JWT with role
     const jwtToken = jwt.sign(
       { email: user.email, role: user.role },
-      process.env.SECRET_KEY,
+      process.env.SECRET_KEY as string,
       { expiresIn: "7d" }
     );
 

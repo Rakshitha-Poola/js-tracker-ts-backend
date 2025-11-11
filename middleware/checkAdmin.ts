@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import { User } from '../models/userModel.js';
+import type { Response, Request, NextFunction } from 'express';
+import { User, type UserSchemaTypes } from '../models/userModel.js';
 
 dotenv.config();
 
-export const checkAdmin = async (req, res, next) => {
+export const checkAdmin = async (req:Request, res:Response, next:NextFunction):Promise<Response | void> => {
   try {
     const authHeader = req.headers?.authorization;
     if (!authHeader) {
@@ -17,11 +18,11 @@ export const checkAdmin = async (req, res, next) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    const decoded = jwt.verify(token, process.env.SECRET_KEY as string) as jwt.JwtPayload;
     const email = decoded.email;
 
     // Find user
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }) as UserSchemaTypes | null;
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }

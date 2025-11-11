@@ -1,8 +1,8 @@
 import { addTopic, bookmarkedQuestions, getAllTopics, getTopicById, progressOfEachTopic, totalProgress, updateFields } from '../controllers/topicController.js';
-import express from 'express'
+import express, { Router } from 'express'
 import { checkUser } from '../middleware/checkUser.js';
 
-const router = express.Router();
+const router:Router = express.Router();
 
 router.post('/addTopics', addTopic)
 router.get("/get-allTopics",checkUser, getAllTopics)

@@ -1,16 +1,17 @@
 import jwt from "jsonwebtoken"
 import dotenv from 'dotenv'
+import { Request, Response, NextFunction } from "express"
 import { User } from "../models/userModel.js"
 
 dotenv.config()
 
-export const checkUser = async(req, res, next) => {
+export const checkUser = async(req:Request, res:Response, next:NextFunction):Promise<Response | void>=> {
     try {
         const token = req?.headers?.authorization?.split(" ")[1]
     if(!token){
         return res.status(400).json({message:"User unauthorized"})
     }
-    const decoded = await jwt.verify(token, process.env.SECRET_KEY)
+    const decoded = await jwt.verify(token, process.env.SECRET_KEY as string)
     const email = decoded.email
     const user = await User.findOne({email})
     if(!user){
