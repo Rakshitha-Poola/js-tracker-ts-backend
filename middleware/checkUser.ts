@@ -11,7 +11,7 @@ export const checkUser = async(req:Request, res:Response, next:NextFunction):Pro
     if(!token){
         return res.status(400).json({message:"User unauthorized"})
     }
-    const decoded = await jwt.verify(token, process.env.SECRET_KEY as string)
+    const decoded = await jwt.verify(token, process.env.SECRET_KEY as string) as jwt.JwtPayload
     const email = decoded.email
     const user = await User.findOne({email})
     if(!user){
